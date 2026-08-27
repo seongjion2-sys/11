@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인간 키우기</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            background-color: #121212;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* 메인 게임 화면 컨테이너 */
+        .game-screen {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 520px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* 1. 거실 배경 사진 */
+        .bg-layer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: url('https://i.ibb.co/L9Hvh3R/bg.jpg') center/cover no-repeat;
+            transition: filter 0.3s ease;
+        }
+
+        /* 2. 누끼 딴 아기 사진 */
+        .baby-layer {
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 130px;
+            z-index: 2;
+            pointer-events: none;
+            transition: transform 0.1s ease;
+        }
+
+        /* 업그레이드 클릭 시 배경 및 아기 블러 처리 */
+        .blur-active .bg-layer {
+            filter: blur(8px) brightness(0.8);
+        }
+        .blur-active .baby-layer {
+            filter: blur(8px) brightness(0.8);
+        }
+
+        /* 3. 업그레이드 모달 슬롯 (사진 2 디자인 재현) */
+        .upgrade-modal {
+            position: absolute;
+            top: 42%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 350px;
+            background: rgba(253, 250, 245, 0.95);
+            border: 3px solid #f6d57a;
+            border-radius: 24px;
+            padding: 18px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s ease;
+        }
+
+        .blur-active .upgrade-modal {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .modal-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        .slot-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1.5px solid #e6d8b8;
+            border-radius: 16px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .slot-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slot-icon { font-size: 24px; }
+        .slot-name { font-size: 14px; font-weight: bold; color: #222; }
+        .slot-level { font-size: 13px; color: #d97706; font-weight: bold; margin-top: 2px; }
+
+        .lvl-btn {
+            background: linear-gradient(180deg, #ffe885 0%, #f4bf37 100%);
+            border: 1px solid #d49b13;
+            border-radius: 10px;
+            padding: 7px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.05s ease;
+        }
+        .lvl-btn:active { transform: scale(0.95); }
+
+        /* 4. 하단 게임 메뉴 바 */
+        .bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(245, 245, 247, 0.92);
+            backdrop-filter: blur(10px);
+            padding: 10px 14px 14px 14px;
+            z-index: 20;
+            border-top: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .status-pill {
+            background: #232323;
+            color: #fff;
+            padding: 5px 20px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: bold;
+            width: fit-content;
+            margin: 0 auto 10px auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-slots {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #d8d8d8;
+            border-radius: 12px;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            color: #444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .nav-btn.active {
+            border: 2px solid #eab308;
+            background: #fffdf5;
+            color: #b45309;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-screen" id="gameScreen">
+    <!-- 배경 이미지 -->
+    <div class="bg-layer"></div>
+    
+    <!-- 아기 캐릭터 -->
+    <img src="https://i.ibb.co/1fW5g32/baby.png" class="baby-layer" alt="아기">
+
+    <!-- 업그레이드 모달 창 -->
+    <div class="upgrade-modal">
+        <div class="modal-title">나이: 1세</div>
+        
+        <div class="slot-card">
+            <div class="slot-left">
+                <span class="slot-icon">🖐️</span>
+                <div>
+                    <div class="slot-name">쓰다듬기</div>
+                    <div class="slot-level">레벨: <span id="lvl-stroke">0</span></div>
+                </div>
+            </div>
+            <button class="lvl-btn" onclick="upgrade('stroke')">레벨업 ✚</button>
+        </div>
+
+        <div class="slot-card">
+            <div class="slot-left">
+                <span class="slot-icon">🍼</span>
+                <div>
+                    <div class="slot-name">밥 먹이기</div>
+                    <div class="slot-level">레벨: <span id="lvl-feed">0</span></div>
+                </div>
+            </div>
+            <button class="lvl-btn" onclick="upgrade('feed')">레벨업 ✚</button>
+        </div>
+
+        <div class="slot-card">
+            <div class="slot-left">
+                <span class="slot-icon">🛈</span>
+                <div>
+                    <div class="slot-name">산책시키기</div>
+                    <div class="slot-level">레벨: <span id="lvl-walk">0</span></div>
+                </div>
+            </div>
+            <button class="lvl-btn" onclick="upgrade('walk')">레벨업 ✚</button>
+        </div>
+    </div>
+
+    <!-- 하단 메뉴 -->
+    <div class="bottom-bar">
+        <div class="status-pill">
+            <span>나이: 1세</span>
+            <span>기분: 우는 중</span>
+        </div>
+        <div class="nav-slots">
+            <button class="nav-btn" id="upgradeBtn" onclick="toggleUpgrade()">⚙️ 업그레이드</button>
+            <button class="nav-btn">📈 성장</button>
+            <button class="nav-btn">❤️ 상태</button>
+            <button class="nav-btn">🖼️ 배경</button>
+            <button class="nav-btn">🔧 옵션</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const levels = { stroke: 0, feed: 0, walk: 0 };
+
+    function toggleUpgrade() {
+        const screen = document.getElementById('gameScreen');
+        const btn = document.getElementById('upgradeBtn');
+        screen.classList.toggle('blur-active');
+        btn.classList.toggle('active');
+    }
+
+    function upgrade(type) {
+        levels[type]++;
+        document.getElementById(`lvl-${type}`).innerText = levels[type];
+    }
+</script>
+
+</body>
+</html>
